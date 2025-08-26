@@ -17,7 +17,7 @@ public class RestaurantDAOImpl implements RestaurantDAO {
 
     // SQL queries
     private static final String INSERT_RESTAURANT_SQL = 
-        "INSERT INTO restaurants (name, address, phone, cuisineType, deliveryTime, adminUserId, imagePath, isActive) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        "INSERT INTO restaurants (name, description, address, phone, email, cuisineType, deliveryTime, adminUserId, imagePath, isActive) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String SELECT_RESTAURANT_BY_ID = 
         "SELECT * FROM restaurants WHERE restaurantId = ?";
     private static final String SELECT_ALL_RESTAURANTS = 
@@ -32,25 +32,27 @@ public class RestaurantDAOImpl implements RestaurantDAO {
     private static final String SELECT_RESTAURANTS_BY_NAME =
         "SELECT * FROM restaurants WHERE name LIKE ?";
     private static final String UPDATE_RESTAURANT_SQL = 
-        "UPDATE restaurants SET name = ?, address = ?, phone = ?, cuisine_type = ?, is_active = ?, eta = ?, image_path = ? WHERE restaurant_id = ?";
+        "UPDATE restaurants SET name = ?, description = ?, address = ?, phone = ?, email = ?, cuisineType = ?, isActive = ?, deliveryTime = ?, imagePath = ? WHERE restaurantId = ?";
     private static final String UPDATE_RESTAURANT_RATING = 
-        "UPDATE restaurants SET rating = ? WHERE restaurant_id = ?";
+        "UPDATE restaurants SET rating = ? WHERE restaurantId = ?";
     private static final String UPDATE_RESTAURANT_STATUS = 
-        "UPDATE restaurants SET is_active = ? WHERE restaurant_id = ?";
+        "UPDATE restaurants SET isActive = ? WHERE restaurantId = ?";
     private static final String DELETE_RESTAURANT_SQL = 
-        "DELETE FROM restaurants WHERE restaurant_id = ?";
+        "DELETE FROM restaurants WHERE restaurantId = ?";
     private static final String SELECT_SORTED_BY_RATING =
         "SELECT * FROM restaurants ORDER BY rating DESC";
     private static final String SELECT_BY_DELIVERY_TIME =
-        "SELECT * FROM restaurants WHERE eta <= ?";
+        "SELECT * FROM restaurants WHERE deliveryTime <= ?";
     
     // Helper method to map a ResultSet row to a Restaurant object
     private Restaurant mapResultSetToRestaurant(ResultSet rs) throws SQLException {
         Restaurant restaurant = new Restaurant();
         restaurant.setRestaurantId(rs.getInt("restaurantId"));
         restaurant.setName(rs.getString("name"));
+        restaurant.setDescription(rs.getString("description"));
         restaurant.setAddress(rs.getString("address"));
         restaurant.setPhone(rs.getString("phone"));
+        restaurant.setEmail(rs.getString("email"));
         restaurant.setRating(rs.getDouble("rating"));
         restaurant.setCuisineType(rs.getString("cuisineType"));
         restaurant.setActive(rs.getBoolean("isActive"));
@@ -65,13 +67,15 @@ public class RestaurantDAOImpl implements RestaurantDAO {
         try (Connection con = DBConnection.getNewConnection();
              PreparedStatement ps = con.prepareStatement(INSERT_RESTAURANT_SQL)) {
             ps.setString(1, restaurant.getName());
-            ps.setString(2, restaurant.getAddress());
-            ps.setString(3, restaurant.getPhone());
-            ps.setString(4, restaurant.getCuisineType());
-            ps.setString(5, restaurant.getDeliveryTime());
-            ps.setInt(6, restaurant.getAdminUserId());
-            ps.setString(7, restaurant.getImagePath());
-            ps.setBoolean(8, restaurant.isActive());
+            ps.setString(2, restaurant.getDescription());
+            ps.setString(3, restaurant.getAddress());
+            ps.setString(4, restaurant.getPhone());
+            ps.setString(5, restaurant.getEmail());
+            ps.setString(6, restaurant.getCuisineType());
+            ps.setString(7, restaurant.getDeliveryTime());
+            ps.setInt(8, restaurant.getAdminUserId());
+            ps.setString(9, restaurant.getImagePath());
+            ps.setBoolean(10, restaurant.isActive());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -183,13 +187,15 @@ public class RestaurantDAOImpl implements RestaurantDAO {
         try (Connection con = DBConnection.getNewConnection();
              PreparedStatement ps = con.prepareStatement(UPDATE_RESTAURANT_SQL)) {
             ps.setString(1, restaurant.getName());
-            ps.setString(2, restaurant.getAddress());
-            ps.setString(3, restaurant.getPhone());
-            ps.setString(4, restaurant.getCuisineType());
-            ps.setBoolean(5, restaurant.isActive());
-            ps.setString(6, restaurant.getDeliveryTime());
-            ps.setString(7, restaurant.getImagePath());
-            ps.setInt(8, restaurant.getRestaurantId());
+            ps.setString(2, restaurant.getDescription());
+            ps.setString(3, restaurant.getAddress());
+            ps.setString(4, restaurant.getPhone());
+            ps.setString(5, restaurant.getEmail());
+            ps.setString(6, restaurant.getCuisineType());
+            ps.setBoolean(7, restaurant.isActive());
+            ps.setString(8, restaurant.getDeliveryTime());
+            ps.setString(9, restaurant.getImagePath());
+            ps.setInt(10, restaurant.getRestaurantId());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();

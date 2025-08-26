@@ -6,35 +6,37 @@ public class Menu {
     private String itemName;
     private String description;
     private double price;
-    private double ratings;
+    private String category;
     private boolean isAvailable;
     private String imagePath;
     
     // Default constructor
-    public Menu() {}
+    public Menu() {
+        this.isAvailable = true;
+    }
     
     // Parameterized constructor
     public Menu(int menuId, int restaurantId, String itemName, String description, 
-                double price, double ratings, boolean isAvailable, String imagePath) {
+                double price, String category, boolean isAvailable, String imagePath) {
         this.menuId = menuId;
         this.restaurantId = restaurantId;
         this.itemName = itemName;
         this.description = description;
         this.price = price;
-        this.ratings = ratings;
+        this.category = category;
         this.isAvailable = isAvailable;
         this.imagePath = imagePath;
     }
     
-    // Constructor without menuId (for new menu item creation)
-    public Menu(int restaurantId, String itemName, String description, double price, 
-                String imagePath) {
+    // Constructor without menuId (for new menu creation)
+    public Menu(int restaurantId, String itemName, String description, 
+                double price, String category, String imagePath) {
         this.restaurantId = restaurantId;
         this.itemName = itemName;
         this.description = description;
         this.price = price;
-        this.ratings = 0.0; // Default rating
-        this.isAvailable = true; // Default to available
+        this.category = category;
+        this.isAvailable = true;
         this.imagePath = imagePath;
     }
     
@@ -79,12 +81,12 @@ public class Menu {
         this.price = price;
     }
     
-    public double getRatings() {
-        return ratings;
+    public String getCategory() {
+        return category;
     }
     
-    public void setRatings(double ratings) {
-        this.ratings = ratings;
+    public void setCategory(String category) {
+        this.category = category;
     }
     
     public boolean isAvailable() {
@@ -111,7 +113,7 @@ public class Menu {
                 ", itemName='" + itemName + '\'' +
                 ", description='" + description + '\'' +
                 ", price=" + price +
-                ", ratings=" + ratings +
+                ", category='" + category + '\'' +
                 ", isAvailable=" + isAvailable +
                 ", imagePath='" + imagePath + '\'' +
                 '}';

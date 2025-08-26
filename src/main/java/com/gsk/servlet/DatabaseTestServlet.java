@@ -1,151 +1,116 @@
 package com.gsk.servlet;
 
+import com.gsk.DAO.RestaurantDAO;
+import com.gsk.DAO.MenuDAO;
+import com.gsk.DAOimp.RestaurantDAOImpl;
+import com.gsk.DAOimp.MenuDAOImpl;
+import com.gsk.model.Restaurant;
+import com.gsk.model.Menu;
+import com.gsk.util.DBConnection;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-
-import com.gsk.util.DBConnection;
+import java.util.List;
 
 @WebServlet("/test-db")
 public class DatabaseTestServlet extends HttpServlet {
-    private static final long serialVersionUID = 1L;
-
+    
+    private RestaurantDAO restaurantDAO;
+    private MenuDAO menuDAO;
+    
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+    public void init() throws ServletException {
+        restaurantDAO = new RestaurantDAOImpl();
+        menuDAO = new MenuDAOImpl();
+    }
+    
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
-        response.setContentType("text/html");
-        PrintWriter out = response.getWriter();
+        response.setContentType("text/html;charset=UTF-8");
+        response.getWriter().println("<html><head><title>Database Test</title></head><body>");
+        response.getWriter().println("<h1>Database Connection Test</h1>");
         
-        out.println("<html><head><title>Database Test</title></head><body>");
-        out.println("<h1>Database Connection Test</h1>");
-        
-        // Test database connection
         try {
-            Connection conn = DBConnection.getNewConnection();
-            if (conn != null) {
-                out.println("<p style='color: green;'>✓ Database connection successful!</p>");
-                
-                // Test restaurants table structure first
-                out.println("<h2>Restaurants Table Structure:</h2>");
-                String descSql = "DESCRIBE restaurants";
-                try (PreparedStatement ps = conn.prepareStatement(descSql);
-                     ResultSet rs = ps.executeQuery()) {
-                    out.println("<table border='1'>");
-                    out.println("<tr><th>Column</th><th>Type</th><th>Null</th><th>Key</th></tr>");
-                    while (rs.next()) {
-                        out.println("<tr>");
-                        out.println("<td>" + rs.getString("Field") + "</td>");
-                        out.println("<td>" + rs.getString("Type") + "</td>");
-                        out.println("<td>" + rs.getString("Null") + "</td>");
-                        out.println("<td>" + rs.getString("Key") + "</td>");
-                        out.println("</tr>");
-                    }
-                    out.println("</table>");
-                } catch (Exception e) {
-                    out.println("<p style='color: red;'>Error describing restaurants: " + e.getMessage() + "</p>");
-                }
-
-                // Test restaurants table data
-                out.println("<h2>Restaurants Table Data:</h2>");
-                String sql = "SELECT * FROM restaurants LIMIT 5";
-                try (PreparedStatement ps = conn.prepareStatement(sql);
-                     ResultSet rs = ps.executeQuery()) {
-                    
-                    out.println("<table border='1'>");
-                    // Get column names dynamically
-                    java.sql.ResultSetMetaData metaData = rs.getMetaData();
-                    int columnCount = metaData.getColumnCount();
-                    out.println("<tr>");
-                    for (int i = 1; i <= columnCount; i++) {
-                        out.println("<th>" + metaData.getColumnName(i) + "</th>");
-                    }
-                    out.println("</tr>");
-                    
-                    int count = 0;
-                    while (rs.next()) {
-                        count++;
-                        out.println("<tr>");
-                        for (int i = 1; i <= columnCount; i++) {
-                            out.println("<td>" + rs.getString(i) + "</td>");
-                        }
-                        out.println("</tr>");
-                    }
-                    out.println("</table>");
-                    out.println("<p>Total restaurants found: " + count + "</p>");
-                } catch (Exception e) {
-                    out.println("<p style='color: red;'>Error querying restaurants: " + e.getMessage() + "</p>");
-                }
-                
-                // Test menu table structure first
-                out.println("<h2>Menu Table Structure:</h2>");
-                String descMenuSql = "DESCRIBE menu";
-                try (PreparedStatement ps = conn.prepareStatement(descMenuSql);
-                     ResultSet rs = ps.executeQuery()) {
-                    out.println("<table border='1'>");
-                    out.println("<tr><th>Column</th><th>Type</th><th>Null</th><th>Key</th></tr>");
-                    while (rs.next()) {
-                        out.println("<tr>");
-                        out.println("<td>" + rs.getString("Field") + "</td>");
-                        out.println("<td>" + rs.getString("Type") + "</td>");
-                        out.println("<td>" + rs.getString("Null") + "</td>");
-                        out.println("<td>" + rs.getString("Key") + "</td>");
-                        out.println("</tr>");
-                    }
-                    out.println("</table>");
-                } catch (Exception e) {
-                    out.println("<p style='color: red;'>Error describing menu: " + e.getMessage() + "</p>");
-                }
-
-                // Test menu table data
-                out.println("<h2>Menu Table Data:</h2>");
-                String menuSql = "SELECT * FROM menu LIMIT 10";
-                try (PreparedStatement ps = conn.prepareStatement(menuSql);
-                     ResultSet rs = ps.executeQuery()) {
-                    
-                    out.println("<table border='1'>");
-                    // Get column names dynamically
-                    java.sql.ResultSetMetaData metaData = rs.getMetaData();
-                    int columnCount = metaData.getColumnCount();
-                    out.println("<tr>");
-                    for (int i = 1; i <= columnCount; i++) {
-                        out.println("<th>" + metaData.getColumnName(i) + "</th>");
-                    }
-                    out.println("</tr>");
-                    
-                    int count = 0;
-                    while (rs.next()) {
-                        count++;
-                        out.println("<tr>");
-                        for (int i = 1; i <= columnCount; i++) {
-                            out.println("<td>" + rs.getString(i) + "</td>");
-                        }
-                        out.println("</tr>");
-                    }
-                    out.println("</table>");
-                    out.println("<p>Total menu items found: " + count + "</p>");
-                } catch (Exception e) {
-                    out.println("<p style='color: red;'>Error querying menu: " + e.getMessage() + "</p>");
-                }
-                
-                conn.close();
+            // Test database connection
+            response.getWriter().println("<h2>1. Testing Database Connection</h2>");
+            Connection con = DBConnection.getNewConnection();
+            if (con != null && !con.isClosed()) {
+                response.getWriter().println("<p style='color: green;'>✅ Database connection successful!</p>");
+                con.close();
             } else {
-                out.println("<p style='color: red;'>✗ Database connection failed!</p>");
+                response.getWriter().println("<p style='color: red;'>❌ Database connection failed!</p>");
             }
+            
+            // Test restaurant data
+            response.getWriter().println("<h2>2. Testing Restaurant Data</h2>");
+            List<Restaurant> restaurants = restaurantDAO.getAllRestaurants();
+            if (restaurants != null && !restaurants.isEmpty()) {
+                response.getWriter().println("<p style='color: green;'>✅ Found " + restaurants.size() + " restaurants</p>");
+                response.getWriter().println("<ul>");
+                for (int i = 0; i < Math.min(5, restaurants.size()); i++) {
+                    Restaurant r = restaurants.get(i);
+                    response.getWriter().println("<li>ID: " + r.getRestaurantId() + " - " + r.getName() + " (" + r.getCuisineType() + ")</li>");
+                }
+                response.getWriter().println("</ul>");
+                
+                // Test specific restaurant
+                if (!restaurants.isEmpty()) {
+                    Restaurant testRestaurant = restaurants.get(0);
+                    response.getWriter().println("<h3>Testing Restaurant ID: " + testRestaurant.getRestaurantId() + "</h3>");
+                    
+                    Restaurant foundRestaurant = restaurantDAO.getRestaurantById(testRestaurant.getRestaurantId());
+                    if (foundRestaurant != null) {
+                        response.getWriter().println("<p style='color: green;'>✅ Restaurant found: " + foundRestaurant.getName() + "</p>");
+                    } else {
+                        response.getWriter().println("<p style='color: red;'>❌ Restaurant not found by ID!</p>");
+                    }
+                }
+            } else {
+                response.getWriter().println("<p style='color: red;'>❌ No restaurants found!</p>");
+            }
+            
+            // Test menu data
+            response.getWriter().println("<h2>3. Testing Menu Data</h2>");
+            if (!restaurants.isEmpty()) {
+                int testRestaurantId = restaurants.get(0).getRestaurantId();
+                response.getWriter().println("<p>Testing menu for restaurant ID: " + testRestaurantId + "</p>");
+                
+                List<Menu> menuItems = menuDAO.getAvailableMenuItemsByRestaurantId(testRestaurantId);
+                if (menuItems != null && !menuItems.isEmpty()) {
+                    response.getWriter().println("<p style='color: green;'>✅ Found " + menuItems.size() + " menu items</p>");
+                    response.getWriter().println("<ul>");
+                    for (int i = 0; i < Math.min(5, menuItems.size()); i++) {
+                        Menu m = menuItems.get(i);
+                        response.getWriter().println("<li>ID: " + m.getMenuId() + " - " + m.getItemName() + " (₹" + m.getPrice() + ") - " + m.getCategory() + "</li>");
+                    }
+                    response.getWriter().println("</ul>");
+                } else {
+                    response.getWriter().println("<p style='color: red;'>❌ No menu items found for restaurant ID: " + testRestaurantId + "</p>");
+                    
+                    // Test if restaurant exists in menu table
+                    response.getWriter().println("<p>Checking if restaurant exists in menu table...</p>");
+                    List<Menu> allMenuItems = menuDAO.getMenuItemsByRestaurantId(testRestaurantId);
+                    if (allMenuItems != null && !allMenuItems.isEmpty()) {
+                        response.getWriter().println("<p style='color: orange;'>⚠️ Found " + allMenuItems.size() + " menu items (including unavailable ones)</p>");
+                    } else {
+                        response.getWriter().println("<p style='color: red;'>❌ No menu items at all for this restaurant!</p>");
+                    }
+                }
+            }
+            
         } catch (Exception e) {
-            out.println("<p style='color: red;'>✗ Database connection error: " + e.getMessage() + "</p>");
-            e.printStackTrace();
+            response.getWriter().println("<p style='color: red;'>❌ Error during testing: " + e.getMessage() + "</p>");
+            e.printStackTrace(response.getWriter());
         }
         
-        out.println("<p><a href='" + request.getContextPath() + "/index.jsp'>← Back to Home Page</a></p>");
-        out.println("</body></html>");
+        response.getWriter().println("<hr><p><a href='" + request.getContextPath() + "'>Back to Home</a></p>");
+        response.getWriter().println("</body></html>");
     }
 }

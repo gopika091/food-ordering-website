@@ -7,7 +7,7 @@ import java.sql.SQLException;
 public class DBConnection {
     
     // Database configuration
-    private static final String URL = "jdbc:mysql://localhost:3306/food_ordering_db";
+    private static final String URL = "jdbc:mysql://localhost:3306/food_delivery_system";
     private static final String USERNAME = "root";  // Change as per your MySQL setup
     private static final String PASSWORD = "root";  // Change as per your MySQL setup
     private static final String DRIVER = "com.mysql.cj.jdbc.Driver";
@@ -23,22 +23,22 @@ public class DBConnection {
      * @return Connection object
      */
     public static Connection getConnection() {
-        if (connection == null) {
-            try {
+        try {
+            // Check if connection is null or closed, create new one
+            if (connection == null || connection.isClosed()) {
                 // Load MySQL JDBC driver
                 Class.forName(DRIVER);
                 
                 // Create connection
                 connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
                 System.out.println("Database connected successfully!");
-                
-            } catch (ClassNotFoundException e) {
-                System.err.println("MySQL JDBC Driver not found!");
-                e.printStackTrace();
-            } catch (SQLException e) {
-                System.err.println("Failed to create database connection!");
-                e.printStackTrace();
             }
+        } catch (ClassNotFoundException e) {
+            System.err.println("MySQL JDBC Driver not found!");
+            e.printStackTrace();
+        } catch (SQLException e) {
+            System.err.println("Failed to create database connection!");
+            e.printStackTrace();
         }
         return connection;
     }

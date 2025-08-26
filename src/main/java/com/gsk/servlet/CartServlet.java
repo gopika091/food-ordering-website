@@ -1,186 +1,154 @@
 package com.gsk.servlet;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import com.gsk.DAO.MenuDAO;
 import com.gsk.DAOimp.MenuDAOImpl;
 import com.gsk.model.Menu;
+import com.gsk.model.CartItem;
 
-@WebServlet("/cart")
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+@WebServlet("/cart/*")
 public class CartServlet extends HttpServlet {
-    private static final long serialVersionUID = 1L;
-    private MenuDAO menuDAO = new MenuDAOImpl();
-
-    // Inner class to represent cart items
-    public static class CartItem {
-        private int menuId;
-        private String itemName;
-        private double price;
-        private int quantity;
-        private int restaurantId;
-        private String restaurantName;
-        private String imagePath;
-
-        // Constructors
-        public CartItem() {}
-
-        public CartItem(int menuId, String itemName, double price, int quantity, 
-                       int restaurantId, String restaurantName, String imagePath) {
-            this.menuId = menuId;
-            this.itemName = itemName;
-            this.price = price;
-            this.quantity = quantity;
-            this.restaurantId = restaurantId;
-            this.restaurantName = restaurantName;
-            this.imagePath = imagePath;
-        }
-
-        // Getters and Setters
-        public int getMenuId() { return menuId; }
-        public void setMenuId(int menuId) { this.menuId = menuId; }
-        
-        public String getItemName() { return itemName; }
-        public void setItemName(String itemName) { this.itemName = itemName; }
-        
-        public double getPrice() { return price; }
-        public void setPrice(double price) { this.price = price; }
-        
-        public int getQuantity() { return quantity; }
-        public void setQuantity(int quantity) { this.quantity = quantity; }
-        
-        public int getRestaurantId() { return restaurantId; }
-        public void setRestaurantId(int restaurantId) { this.restaurantId = restaurantId; }
-        
-        public String getRestaurantName() { return restaurantName; }
-        public void setRestaurantName(String restaurantName) { this.restaurantName = restaurantName; }
-        
-        public String getImagePath() { return imagePath; }
-        public void setImagePath(String imagePath) { this.imagePath = imagePath; }
-        
-        public double getSubtotal() {
-            return price * quantity;
-        }
-    }
-
+    
+    private MenuDAO menuDAO;
+    
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+    public void init() throws ServletException {
+        menuDAO = new MenuDAOImpl();
+    }
+    
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
-        HttpSession session = request.getSession(false);
-        if (session == null || session.getAttribute("username") == null) {
-            response.sendRedirect(request.getContextPath() + "/login.jsp");
-            return;
+        String pathInfo = request.getPathInfo();
+        
+        if (pathInfo == null || pathInfo.equals("/")) {
+            // Show cart
+            showCart(request, response);
+        } else if (pathInfo.equals("/add")) {
+            // Add item to cart
+            addToCart(request, response);
+        } else if (pathInfo.equals("/update")) {
+            // Update quantity
+            updateQuantity(request, response);
+        } else if (pathInfo.equals("/remove")) {
+            // Remove item from cart
+            removeFromCart(request, response);
+        } else if (pathInfo.equals("/clear")) {
+            // Clear cart
+            clearCart(request, response);
+        } else {
+            // Default: show cart
+            showCart(request, response);
         }
-
-        // Forward to cart JSP page
-        request.getRequestDispatcher("/customer/cart.jsp").forward(request, response);
     }
-
+    
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
-        
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        PrintWriter out = response.getWriter();
-        
-        String action = request.getParameter("action");
-        
-        try {
-            if ("add".equals(action)) {
-                handleAddToCart(request, response, out);
-            } else if ("update".equals(action)) {
-                handleUpdateCart(request, response, out);
-            } else if ("remove".equals(action)) {
-                handleRemoveFromCart(request, response, out);
-            } else if ("clear".equals(action)) {
-                handleClearCart(request, response, out);
-            } else {
-                out.write("{\"success\":false,\"message\":\"Invalid action\"}");
-            }
-        } catch (Exception e) {
-            out.write("{\"success\":false,\"message\":\"Server error: " + e.getMessage() + "\"}");
-            e.printStackTrace();
-        }
+        doGet(request, response);
     }
-
-    private void handleAddToCart(HttpServletRequest request, HttpServletResponse response,
-                                PrintWriter out) throws IOException {
+    
+    private void addToCart(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
         
         HttpSession session = request.getSession();
-        List<CartItem> cart = getCartFromSession(session);
         
         try {
             int menuId = Integer.parseInt(request.getParameter("menuId"));
-            int quantity = Integer.parseInt(request.getParameter("quantity"));
+            int restaurantId = Integer.parseInt(request.getParameter("restaurantId"));
+            String restaurantName = request.getParameter("restaurantName");
             
-            // Get menu item details from database
+            // Get menu item details
             Menu menuItem = menuDAO.getMenuItemById(menuId);
-            if (menuItem == null || !menuItem.isAvailable()) {
-                out.write("{\"success\":false,\"message\":\"Item not available\"}");
+            
+            if (menuItem == null) {
+                response.getWriter().write("{\"success\": false, \"message\": \"Menu item not found\"}");
                 return;
             }
             
+            // Get or create cart in session
+            @SuppressWarnings("unchecked")
+            List<CartItem> cart = (List<CartItem>) session.getAttribute("cart");
+            if (cart == null) {
+                cart = new ArrayList<>();
+                session.setAttribute("cart", cart);
+            }
+            
             // Check if item already exists in cart
-            boolean found = false;
+            CartItem existingItem = null;
             for (CartItem item : cart) {
                 if (item.getMenuId() == menuId) {
-                    item.setQuantity(item.getQuantity() + quantity);
-                    found = true;
+                    existingItem = item;
                     break;
                 }
             }
             
-            if (!found) {
-                // Add new item to cart
+            if (existingItem != null) {
+                // Increase quantity
+                existingItem.setQuantity(existingItem.getQuantity() + 1);
+            } else {
+                // Add new item
                 CartItem newItem = new CartItem(
+                    1, // userId (hardcoded for now)
+                    restaurantId,
                     menuId,
                     menuItem.getItemName(),
+                    menuItem.getDescription(),
                     menuItem.getPrice(),
-                    quantity,
-                    menuItem.getRestaurantId(),
-                    "",  // Restaurant name will be set if needed
-                    menuItem.getImagePath()
+                    restaurantName
                 );
                 cart.add(newItem);
             }
             
-            session.setAttribute("cart", cart);
+            // Calculate cart total
+            double total = calculateCartTotal(cart);
+            int itemCount = cart.size();
             
-            int totalItems = getTotalCartItems(cart);
-            out.write("{\"success\":true,\"message\":\"Item added to cart\",\"cartCount\":" + totalItems + "}");
+            // Return JSON response
+            String jsonResponse = String.format(
+                "{\"success\": true, \"message\": \"Added to cart\", \"total\": %.2f, \"itemCount\": %d}",
+                total, itemCount
+            );
+            
+            response.setContentType("application/json");
+            response.getWriter().write(jsonResponse);
             
         } catch (NumberFormatException e) {
-            out.write("{\"success\":false,\"message\":\"Invalid parameters\"}");
+            response.getWriter().write("{\"success\": false, \"message\": \"Invalid parameters\"}");
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"success\": false, \"message\": \"Error adding to cart\"}");
         }
     }
-
-    private void handleUpdateCart(HttpServletRequest request, HttpServletResponse response,
-                                 PrintWriter out) throws IOException {
+    
+    private void updateQuantity(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
         
         HttpSession session = request.getSession();
-        List<CartItem> cart = getCartFromSession(session);
         
         try {
             int menuId = Integer.parseInt(request.getParameter("menuId"));
             int quantity = Integer.parseInt(request.getParameter("quantity"));
             
             if (quantity <= 0) {
-                // Remove item if quantity is 0 or negative
-                cart.removeIf(item -> item.getMenuId() == menuId);
-            } else {
-                // Update quantity
+                removeFromCart(request, response);
+                return;
+            }
+            
+            @SuppressWarnings("unchecked")
+            List<CartItem> cart = (List<CartItem>) session.getAttribute("cart");
+            
+            if (cart != null) {
                 for (CartItem item : cart) {
                     if (item.getMenuId() == menuId) {
                         item.setQuantity(quantity);
@@ -189,56 +157,90 @@ public class CartServlet extends HttpServlet {
                 }
             }
             
-            session.setAttribute("cart", cart);
+            double total = calculateCartTotal(cart);
+            String jsonResponse = String.format(
+                "{\"success\": true, \"total\": %.2f}",
+                total
+            );
             
-            int totalItems = getTotalCartItems(cart);
-            out.write("{\"success\":true,\"message\":\"Cart updated\",\"cartCount\":" + totalItems + "}");
+            response.setContentType("application/json");
+            response.getWriter().write(jsonResponse);
             
         } catch (NumberFormatException e) {
-            out.write("{\"success\":false,\"message\":\"Invalid parameters\"}");
+            response.getWriter().write("{\"success\": false, \"message\": \"Invalid parameters\"}");
         }
     }
-
-    private void handleRemoveFromCart(HttpServletRequest request, HttpServletResponse response,
-                                     PrintWriter out) throws IOException {
+    
+    private void removeFromCart(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
         
         HttpSession session = request.getSession();
-        List<CartItem> cart = getCartFromSession(session);
         
         try {
             int menuId = Integer.parseInt(request.getParameter("menuId"));
-            cart.removeIf(item -> item.getMenuId() == menuId);
             
-            session.setAttribute("cart", cart);
+            @SuppressWarnings("unchecked")
+            List<CartItem> cart = (List<CartItem>) session.getAttribute("cart");
             
-            int totalItems = getTotalCartItems(cart);
-            out.write("{\"success\":true,\"message\":\"Item removed from cart\",\"cartCount\":" + totalItems + "}");
+            if (cart != null) {
+                cart.removeIf(item -> item.getMenuId() == menuId);
+            }
+            
+            double total = calculateCartTotal(cart);
+            int itemCount = cart != null ? cart.size() : 0;
+            
+            String jsonResponse = String.format(
+                "{\"success\": true, \"message\": \"Item removed\", \"total\": %.2f, \"itemCount\": %d}",
+                total, itemCount
+            );
+            
+            response.setContentType("application/json");
+            response.getWriter().write(jsonResponse);
             
         } catch (NumberFormatException e) {
-            out.write("{\"success\":false,\"message\":\"Invalid parameters\"}");
+            response.getWriter().write("{\"success\": false, \"message\": \"Invalid parameters\"}");
         }
     }
-
-    private void handleClearCart(HttpServletRequest request, HttpServletResponse response,
-                                PrintWriter out) throws IOException {
+    
+    private void clearCart(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
         
         HttpSession session = request.getSession();
         session.removeAttribute("cart");
         
-        out.write("{\"success\":true,\"message\":\"Cart cleared\",\"cartCount\":0}");
+        String jsonResponse = "{\"success\": true, \"message\": \"Cart cleared\", \"total\": 0.00, \"itemCount\": 0}";
+        
+        response.setContentType("application/json");
+        response.getWriter().write(jsonResponse);
     }
-
-    @SuppressWarnings("unchecked")
-    private List<CartItem> getCartFromSession(HttpSession session) {
+    
+    private void showCart(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
+        
+        HttpSession session = request.getSession();
+        @SuppressWarnings("unchecked")
         List<CartItem> cart = (List<CartItem>) session.getAttribute("cart");
+        
         if (cart == null) {
             cart = new ArrayList<>();
-            session.setAttribute("cart", cart);
         }
-        return cart;
+        
+        double total = calculateCartTotal(cart);
+        
+        request.setAttribute("cartItems", cart);
+        request.setAttribute("cartTotal", total);
+        request.setAttribute("itemCount", cart.size());
+        
+        request.getRequestDispatcher("/cart.jsp").forward(request, response);
     }
-
-    private int getTotalCartItems(List<CartItem> cart) {
-        return cart.stream().mapToInt(CartItem::getQuantity).sum();
+    
+    private double calculateCartTotal(List<CartItem> cart) {
+        if (cart == null) return 0.0;
+        
+        double total = 0.0;
+        for (CartItem item : cart) {
+            total += item.getSubtotal();
+        }
+        return total;
     }
 }

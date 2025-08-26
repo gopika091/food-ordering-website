@@ -20,13 +20,15 @@ public class Restaurant {
     }
     
     // Parameterized constructor (original)
-    public Restaurant(int restaurantId, String name, String address, String phone, 
-                      double rating, String cuisineType, boolean isActive, String deliveryTime, 
+    public Restaurant(int restaurantId, String name, String description, String address, String phone, 
+                      String email, double rating, String cuisineType, boolean isActive, String deliveryTime, 
                       int adminUserId, String imagePath) {
         this.restaurantId = restaurantId;
         this.name = name;
+        this.description = description;
         this.address = address;
         this.phone = phone;
+        this.email = email;
         this.rating = rating;
         this.cuisineType = cuisineType;
         this.isActive = isActive;
@@ -36,11 +38,13 @@ public class Restaurant {
     }
     
     // Constructor without restaurantId (for new restaurant creation)
-    public Restaurant(String name, String address, String phone, String cuisineType, 
-                      String deliveryTime, int adminUserId, String imagePath) {
+    public Restaurant(String name, String description, String address, String phone, String email, 
+                      String cuisineType, String deliveryTime, int adminUserId, String imagePath) {
         this.name = name;
+        this.description = description;
         this.address = address;
         this.phone = phone;
+        this.email = email;
         this.rating = 0.0;
         this.cuisineType = cuisineType;
         this.isActive = true;
