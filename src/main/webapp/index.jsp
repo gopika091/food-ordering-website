@@ -1,4 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page import="java.util.*" %>
+<%@ page import="com.gsk.model.Restaurant" %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -6,8 +8,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FoodZone - Order Food Online</title>
     <link rel="stylesheet" href="css/index.css">
-    
-    
+    <style>
+        .no-restaurants {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+            font-size: 18px;
+            grid-column: 1 / -1;
+        }
+        
+        .no-restaurants h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .no-restaurants p {
+            margin-bottom: 20px;
+        }
+        
+        .debug-info {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+    </style>
 </head>
 <body>
     <!-- Navigation Bar -->
@@ -73,161 +100,287 @@
             <div class="section-title">
                 <h2>Featured Restaurants</h2>
                 <p>Popular restaurants in your area</p>
+                <button onclick="toggleAllRestaurants()" class="btn btn-outline" id="viewAllBtn" style="margin-top: 10px; display: inline-block;">View All Restaurants</button>
+                <a href="<%= request.getContextPath() %>/test-db.jsp" class="btn btn-outline" style="margin-top: 10px; margin-left: 10px; display: inline-block;">🔍 Test Database</a>
+                <a href="<%= request.getContextPath() %>/debug-restaurant.jsp" class="btn btn-outline" style="margin-top: 10px; margin-left: 10px; display: inline-block;">🔧 Debug Links</a>
             </div>
             
             <div class="restaurants-grid">
-                <!-- Restaurant Card 1 -->
-                <div class="restaurant-card" onclick="window.location.href='${pageContext.request.contextPath}/restaurant?id=1'">
-                    <div class="restaurant-image">
-                        <div style="background: linear-gradient(45deg, #ff6b6b, #4ecdc4); height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 3em;">🍕</div>
-                    </div>
-                    <div class="restaurant-info">
-                        <div class="restaurant-header">
-                            <div>
-                                <div class="restaurant-name">Mario's Pizza Palace</div>
-                                <div class="restaurant-details">📍 Downtown • ₹₹</div>
+                <%
+                // Get restaurants from the database
+                boolean showDbRestaurants = false;
+                try {
+                    com.gsk.DAO.RestaurantDAO restaurantDAO = new com.gsk.DAOimp.RestaurantDAOImpl();
+                    java.util.List<com.gsk.model.Restaurant> restaurants = restaurantDAO.getActiveRestaurants();
+                    
+                    if (restaurants != null && !restaurants.isEmpty()) {
+                        showDbRestaurants = true;
+                        // Show first 6 restaurants as featured
+                        int count = 0;
+                        for (com.gsk.model.Restaurant restaurant : restaurants) {
+                            if (count >= 6) break; // Limit to 6 featured restaurants
+                %>
+                            <div class="restaurant-card" onclick="window.location.href='<%= request.getContextPath() %>/restaurant-details.jsp?id=<%= restaurant.getRestaurantId() %>'"> 
+                                <div class="restaurant-image">
+                                    <%
+                                    String cuisineType = restaurant.getCuisineType();
+                                    if ("Italian".equals(cuisineType)) {
+                                        out.print("🍕");
+                                    } else if ("Indian".equals(cuisineType) || "North Indian".equals(cuisineType) || "South Indian".equals(cuisineType)) {
+                                        out.print("🍛");
+                                    } else if ("Chinese".equals(cuisineType)) {
+                                        out.print("🍜");
+                                    } else if ("Mexican".equals(cuisineType)) {
+                                        out.print("🌮");
+                                    } else if ("American".equals(cuisineType)) {
+                                        out.print("🍔");
+                                    } else if ("Thai".equals(cuisineType)) {
+                                        out.print("🍜");
+                                    } else if ("Japanese".equals(cuisineType)) {
+                                        out.print("🍱");
+                                    } else if ("Mediterranean".equals(cuisineType)) {
+                                        out.print("🥗");
+                                    } else if ("Kerala".equals(cuisineType)) {
+                                        out.print("🥥");
+                                    } else if ("Mughlai".equals(cuisineType)) {
+                                        out.print("🍖");
+                                    } else {
+                                        out.print("🍽️");
+                                    }
+                                    %>
+                                </div>
+                                <div class="restaurant-info">
+                                    <div class="restaurant-header">
+                                        <div>
+                                            <div class="restaurant-name"><%= restaurant.getName() %></div>
+                                            <div class="restaurant-details">
+                                                📍 <%= restaurant.getAddress() != null ? restaurant.getAddress().length() > 20 ? restaurant.getAddress().substring(0, 20) + "..." : restaurant.getAddress() : "Location" %> • 
+                                                <%
+                                                double rating = restaurant.getRating();
+                                                if (rating >= 4.5) {
+                                                    out.print("₹₹₹");
+                                                } else if (rating >= 3.5) {
+                                                    out.print("₹₹");
+                                                } else {
+                                                    out.print("₹");
+                                                }
+                                                %>
+                                            </div>
+                                        </div>
+                                        <div class="rating"><%= restaurant.getRating() %> ⭐</div>
+                                    </div>
+                                    <div class="cuisine-tags">
+                                        <span class="cuisine-tag"><%= restaurant.getCuisineType() %></span>
+                                        <% if (restaurant.getRating() >= 4.0) { %>
+                                            <span class="cuisine-tag" style="background: #d4edda; color: #155724;">Top Rated</span>
+                                        <% } %>
+                                        <% 
+                                        String deliveryTime = restaurant.getDeliveryTime();
+                                        if (deliveryTime != null && deliveryTime.contains("20")) { 
+                                        %>
+                                            <span class="cuisine-tag" style="background: #fff3cd; color: #856404;">Fast Delivery</span>
+                                        <% } %>
+                                    </div>
+                                    <div class="delivery-info">
+                                        <span class="delivery-time">
+                                            ⏰ <%= deliveryTime != null ? deliveryTime : "30-40 mins" %>
+                                        </span>
+                                        <span>
+                                            💰 ₹<%= restaurant.getRating() >= 4.0 ? "40" : "50" %> delivery fee
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="rating">4.3 ⭐</div>
-                        </div>
-                        <div class="cuisine-tags">
-                            <span class="cuisine-tag">Italian</span>
-                            <span class="cuisine-tag">Pizza</span>
-                            <span class="cuisine-tag">Fast Food</span>
-                        </div>
-                        <div class="delivery-info">
-                            <span class="delivery-time">⏰ 25-30 mins</span>
-                            <span>💰 ₹50 delivery fee</span>
+                <%
+                            count++;
+                        }
+                    }
+                } catch (Exception e) {
+                    out.println("<div class='debug-info'>Database error: " + e.getMessage() + "</div>");
+                }
+                
+                // If no database restaurants, show sample restaurants
+                if (!showDbRestaurants) {
+                %>
+                    <!-- Fallback Sample Restaurants -->
+                    <div class="debug-info">
+                        <strong>⚠️ Note:</strong> Showing sample restaurants because database restaurants couldn't be loaded. 
+                        Check your database connection.
+                    </div>
+                    
+                    <!-- Sample Restaurant 1 -->
+                    <div class="restaurant-card" onclick="window.location.href='<%= request.getContextPath() %>/restaurant-details.jsp?id=1'">
+                        <div class="restaurant-image">🍛</div>
+                        <div class="restaurant-info">
+                            <div class="restaurant-header">
+                                <div>
+                                    <div class="restaurant-name">Spice Garden</div>
+                                    <div class="restaurant-details">
+                                        📍 Brigade Road • ₹₹₹
+                                    </div>
+                                </div>
+                                <div class="rating">4.5 ⭐</div>
+                            </div>
+                            <div class="cuisine-tags">
+                                <span class="cuisine-tag">North Indian</span>
+                                <span class="cuisine-tag" style="background: #d4edda; color: #155724;">Top Rated</span>
+                            </div>
+                            <div class="delivery-info">
+                                <span class="delivery-time">⏰ 30-40 mins</span>
+                                <span>💰 ₹40 delivery fee</span>
+                            </div>
                         </div>
                     </div>
+                    
+                    <!-- Sample Restaurant 2 -->
+                    <div class="restaurant-card" onclick="window.location.href='<%= request.getContextPath() %>/restaurant-details.jsp?id=2'">
+                        <div class="restaurant-image">🍕</div>
+                        <div class="restaurant-info">
+                            <div class="restaurant-header">
+                                <div>
+                                    <div class="restaurant-name">Pizza Palace</div>
+                                    <div class="restaurant-details">
+                                        📍 Koramangala • ₹₹₹
+                                    </div>
+                                </div>
+                                <div class="rating">4.4 ⭐</div>
+                            </div>
+                            <div class="cuisine-tags">
+                                <span class="cuisine-tag">Italian</span>
+                                <span class="cuisine-tag" style="background: #d4edda; color: #155724;">Top Rated</span>
+                            </div>
+                            <div class="delivery-info">
+                                <span class="delivery-time">⏰ 35-45 mins</span>
+                                <span>💰 ₹40 delivery fee</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sample Restaurant 3 -->
+                    <div class="restaurant-card" onclick="window.location.href='<%= request.getContextPath() %>/restaurant-details.jsp?id=3'">
+                        <div class="restaurant-image">🍜</div>
+                        <div class="restaurant-info">
+                            <div class="restaurant-header">
+                                <div>
+                                    <div class="restaurant-name">Chinese Wok</div>
+                                    <div class="restaurant-details">
+                                        📍 HSR Layout • ₹₹
+                                    </div>
+                                </div>
+                                <div class="rating">4.2 ⭐</div>
+                            </div>
+                            <div class="cuisine-tags">
+                                <span class="cuisine-tag">Chinese</span>
+                                <span class="cuisine-tag" style="background: #d4edda; color: #155724;">Top Rated</span>
+                            </div>
+                            <div class="delivery-info">
+                                <span class="delivery-time">⏰ 40-50 mins</span>
+                                <span>💰 ₹50 delivery fee</span>
+                            </div>
+                        </div>
+                    </div>
+                <%
+                }
+                %>
+            </div>
+            
+            <!-- All Restaurants Section (Hidden by default) -->
+            <div id="allRestaurantsSection" style="display: none; margin-top: 30px;">
+                <div class="section-title">
+                    <h2>All Restaurants</h2>
+                    <button onclick="toggleAllRestaurants()" class="btn btn-outline">Show Featured Only</button>
                 </div>
                 
-                <!-- Restaurant Card 2 -->
-                <div class="restaurant-card" onclick="window.location.href='${pageContext.request.contextPath}/restaurant?id=2'">
-                    <div class="restaurant-image">
-                        <div style="background: linear-gradient(45deg, #f093fb, #f5576c); height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 3em;">🍔</div>
-                    </div>
-                    <div class="restaurant-info">
-                        <div class="restaurant-header">
-                            <div>
-                                <div class="restaurant-name">Burger Junction</div>
-                                <div class="restaurant-details">📍 Mall Road • ₹₹</div>
-                            </div>
-                            <div class="rating">4.1 ⭐</div>
-                        </div>
-                        <div class="cuisine-tags">
-                            <span class="cuisine-tag">American</span>
-                            <span class="cuisine-tag">Burgers</span>
-                            <span class="cuisine-tag">Fast Food</span>
-                        </div>
-                        <div class="delivery-info">
-                            <span class="delivery-time">⏰ 20-25 mins</span>
-                            <span>💰 ₹40 delivery fee</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Restaurant Card 3 -->
-                <div class="restaurant-card" onclick="window.location.href='${pageContext.request.contextPath}/restaurant?id=3'">
-                    <div class="restaurant-image">
-                        <div style="background: linear-gradient(45deg, #667eea, #764ba2); height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 3em;">🍛</div>
-                    </div>
-                    <div class="restaurant-info">
-                        <div class="restaurant-header">
-                            <div>
-                                <div class="restaurant-name">Spice Garden</div>
-                                <div class="restaurant-details">📍 City Center • ₹₹₹</div>
-                            </div>
-                            <div class="rating">4.5 ⭐</div>
-                        </div>
-                        <div class="cuisine-tags">
-                            <span class="cuisine-tag">Indian</span>
-                            <span class="cuisine-tag">Biryani</span>
-                            <span class="cuisine-tag">North Indian</span>
-                        </div>
-                        <div class="delivery-info">
-                            <span class="delivery-time">⏰ 30-40 mins</span>
-                            <span>💰 ₹60 delivery fee</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Restaurant Card 4 -->
-                <div class="restaurant-card" onclick="window.location.href='${pageContext.request.contextPath}/restaurant?id=4'">
-                    <div class="restaurant-image">
-                        <div style="background: linear-gradient(45deg, #fa709a, #fee140); height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 3em;">🍜</div>
-                    </div>
-                    <div class="restaurant-info">
-                        <div class="restaurant-header">
-                            <div>
-                                <div class="restaurant-name">Dragon Wok</div>
-                                <div class="restaurant-details">📍 Main Street • ₹₹</div>
-                            </div>
-                            <div class="rating">4.2 ⭐</div>
-                        </div>
-                        <div class="cuisine-tags">
-                            <span class="cuisine-tag">Chinese</span>
-                            <span class="cuisine-tag">Thai</span>
-                            <span class="cuisine-tag">Asian</span>
-                        </div>
-                        <div class="delivery-info">
-                            <span class="delivery-time">⏰ 25-35 mins</span>
-                            <span>💰 ₹45 delivery fee</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Restaurant Card 5 -->
-     
-             <!--  <div  class="restaurant-card" onclick="window.location.href='customer/restaurant-menu.jsp?id=5'">  -->
-                <div  class ="restaurant-card" onclick="window.location.href='${pageContext.request.contextPath}/restaurant?id=5'">
-                
-                
-                    <div class="restaurant-image">
-                        <div style="background: linear-gradient(45deg, #a8edea, #fed6e3); height: 100%; display: flex; align-items: center; justify-content: center; color: #333; font-size: 3em;">🍝</div>
-                    </div>
-                    <div class="restaurant-info">
-                        <div class="restaurant-header">
-                            <div>
-                                <div class="restaurant-name">Pasta Bella</div>
-                                <div class="restaurant-details">📍 Park Avenue • ₹₹₹</div>
-                            </div>
-                            <div class="rating">4.4 ⭐</div>
-                        </div>
-                        <div class="cuisine-tags">
-                            <span class="cuisine-tag">Italian</span>
-                            <span class="cuisine-tag">Pasta</span>
-                            <span class="cuisine-tag">Continental</span>
-                        </div>
-                        <div class="delivery-info">
-                            <span class="delivery-time">⏰ 35-45 mins</span>
-                            <span>💰 ₹70 delivery fee</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Restaurant Card 6 -->
-                <div class="restaurant-card" onclick="window.location.href='${pageContext.request.contextPath}/restaurant?id=6'">
-                    <div class="restaurant-image">
-                        <div style="background: linear-gradient(45deg, #ffecd2, #fcb69f); height: 100%; display: flex; align-items: center; justify-content: center; color: #333; font-size: 3em;">🌮</div>
-                    </div>
-                    <div class="restaurant-info">
-                        <div class="restaurant-header">
-                            <div>
-                                <div class="restaurant-name">Taco Fiesta</div>
-                                <div class="restaurant-details">📍 Food Court • ₹₹</div>
-                            </div>
-                            <div class="rating">4.0 ⭐</div>
-                        </div>
-                        <div class="cuisine-tags">
-                            <span class="cuisine-tag">Mexican</span>
-                            <span class="cuisine-tag">Tex-Mex</span>
-                            <span class="cuisine-tag">Fast Food</span>
-                        </div>
-                        <div class="delivery-info">
-                            <span class="delivery-time">⏰ 20-30 mins</span>
-                            <span>💰 ₹35 delivery fee</span>
-                        </div>
-                    </div>
+                <div class="restaurants-grid">
+                    <%
+                    // Show all restaurants when expanded
+                    try {
+                        com.gsk.DAO.RestaurantDAO allRestaurantDAO = new com.gsk.DAOimp.RestaurantDAOImpl();
+                        java.util.List<com.gsk.model.Restaurant> allRestaurants = allRestaurantDAO.getActiveRestaurants();
+                        
+                        if (allRestaurants != null && !allRestaurants.isEmpty()) {
+                            for (com.gsk.model.Restaurant restaurant : allRestaurants) {
+                    %>
+                                <div class="restaurant-card" onclick="window.location.href='<%= request.getContextPath() %>/restaurant-details.jsp?id=<%= restaurant.getRestaurantId() %>'"> 
+                                    <div class="restaurant-image">
+                                        <%
+                                        String cuisineType = restaurant.getCuisineType();
+                                        if ("Italian".equals(cuisineType)) {
+                                            out.print("🍕");
+                                        } else if ("Indian".equals(cuisineType) || "North Indian".equals(cuisineType) || "South Indian".equals(cuisineType)) {
+                                            out.print("🍛");
+                                        } else if ("Chinese".equals(cuisineType)) {
+                                            out.print("🍜");
+                                        } else if ("Mexican".equals(cuisineType)) {
+                                            out.print("🌮");
+                                        } else if ("American".equals(cuisineType)) {
+                                            out.print("🍔");
+                                        } else if ("Thai".equals(cuisineType)) {
+                                            out.print("🍜");
+                                        } else if ("Japanese".equals(cuisineType)) {
+                                            out.print("🍱");
+                                        } else if ("Mediterranean".equals(cuisineType)) {
+                                            out.print("🥗");
+                                        } else if ("Kerala".equals(cuisineType)) {
+                                            out.print("🥥");
+                                        } else if ("Mughlai".equals(cuisineType)) {
+                                            out.print("🍖");
+                                        } else {
+                                            out.print("🍽️");
+                                        }
+                                        %>
+                                    </div>
+                                    <div class="restaurant-info">
+                                        <div class="restaurant-header">
+                                            <div>
+                                                <div class="restaurant-name"><%= restaurant.getName() %></div>
+                                                <div class="restaurant-details">
+                                                    📍 <%= restaurant.getAddress() != null ? restaurant.getAddress().length() > 20 ? restaurant.getAddress().substring(0, 20) + "..." : restaurant.getAddress() : "Location" %> • 
+                                                    <%
+                                                    double rating = restaurant.getRating();
+                                                    if (rating >= 4.5) {
+                                                        out.print("₹₹₹");
+                                                    } else if (rating >= 3.5) {
+                                                        out.print("₹₹");
+                                                    } else {
+                                                        out.print("₹");
+                                                    }
+                                                    %>
+                                                </div>
+                                            </div>
+                                            <div class="rating"><%= restaurant.getRating() %> ⭐</div>
+                                        </div>
+                                        <div class="cuisine-tags">
+                                            <span class="cuisine-tag"><%= restaurant.getCuisineType() %></span>
+                                            <% if (restaurant.getRating() >= 4.0) { %>
+                                                <span class="cuisine-tag" style="background: #d4edda; color: #155724;">Top Rated</span>
+                                            <% } %>
+                                            <% 
+                                            String deliveryTime = restaurant.getDeliveryTime();
+                                            if (deliveryTime != null && deliveryTime.contains("20")) { 
+                                            %>
+                                                <span class="cuisine-tag" style="background: #fff3cd; color: #856404;">Fast Delivery</span>
+                                            <% } %>
+                                        </div>
+                                        <div class="delivery-info">
+                                            <span class="delivery-time">
+                                                ⏰ <%= deliveryTime != null ? deliveryTime : "30-40 mins" %>
+                                            </span>
+                                            <span>
+                                                💰 ₹<%= restaurant.getRating() >= 4.0 ? "40" : "50" %> delivery fee
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                    <%
+                            }
+                        } else {
+                            out.println("<div class='no-restaurants'><h3>No restaurants found in database</h3><p>Please check your database setup.</p></div>");
+                        }
+                    } catch (Exception e) {
+                        out.println("<div class='debug-info'>Error loading all restaurants: " + e.getMessage() + "</div>");
+                    }
+                    %>
                 </div>
             </div>
         </section>
@@ -244,5 +397,35 @@
             <a href="#">Terms of Service</a>
         </div>
     </footer>
+    
+    <script>
+        function toggleAllRestaurants() {
+            const featuredSection = document.querySelector('.restaurants .restaurants-grid');
+            const allRestaurantsSection = document.getElementById('allRestaurantsSection');
+            const viewAllBtn = document.getElementById('viewAllBtn');
+            
+            if (allRestaurantsSection.style.display === 'none') {
+                // Show all restaurants
+                featuredSection.style.display = 'none';
+                allRestaurantsSection.style.display = 'block';
+                viewAllBtn.textContent = 'Show Featured Only';
+                // Scroll to the all restaurants section
+                allRestaurantsSection.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                // Show featured only
+                featuredSection.style.display = 'grid';
+                allRestaurantsSection.style.display = 'none';
+                viewAllBtn.textContent = 'View All Restaurants';
+                // Scroll to the featured restaurants section
+                document.querySelector('.restaurants').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+        
+        // This function is no longer needed since we're using direct onclick handlers
+        function testRestaurantClick(id) {
+            // Navigate to restaurant details page (JSP version)
+            window.location.href = '<%= request.getContextPath() %>/restaurant-details.jsp?id=' + id;
+        }
+    </script>
 </body>
 </html>
