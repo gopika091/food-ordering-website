@@ -5,17 +5,17 @@ import com.gsk.DAOimp.MenuDAOImpl;
 import com.gsk.model.Menu;
 import com.gsk.model.CartItem;
 
-import javax.servlet.ServletException;
-import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-@WebServlet("/cart/*")
+@WebServlet(urlPatterns = {"/cart", "/cart/*"})
 public class CartServlet extends HttpServlet {
     
     private MenuDAO menuDAO;
@@ -23,6 +23,7 @@ public class CartServlet extends HttpServlet {
     @Override
     public void init() throws ServletException {
         menuDAO = new MenuDAOImpl();
+        System.out.println("[FoodZone] CartServlet initialized and mapped to /cart and /cart/*");
     }
     
     @Override
@@ -46,6 +47,9 @@ public class CartServlet extends HttpServlet {
         } else if (pathInfo.equals("/clear")) {
             // Clear cart
             clearCart(request, response);
+        } else if (pathInfo.equals("/counts")) {
+            // Return quantities for items in cart (JSON)
+            getCartCounts(request, response);
         } else {
             // Default: show cart
             showCart(request, response);
@@ -67,6 +71,7 @@ public class CartServlet extends HttpServlet {
             int menuId = Integer.parseInt(request.getParameter("menuId"));
             int restaurantId = Integer.parseInt(request.getParameter("restaurantId"));
             String restaurantName = request.getParameter("restaurantName");
+            String redirectParam = request.getParameter("redirect");
             
             // Get menu item details
             Menu menuItem = menuDAO.getMenuItemById(menuId);
@@ -114,12 +119,17 @@ public class CartServlet extends HttpServlet {
             double total = calculateCartTotal(cart);
             int itemCount = cart.size();
             
-            // Return JSON response
+            // If redirect requested, go to cart page
+            if (redirectParam != null && ("true".equalsIgnoreCase(redirectParam) || "1".equals(redirectParam) || "yes".equalsIgnoreCase(redirectParam))) {
+                response.sendRedirect(request.getContextPath() + "/cart");
+                return;
+            }
+
+            // Default JSON response (AJAX flow)
             String jsonResponse = String.format(
                 "{\"success\": true, \"message\": \"Added to cart\", \"total\": %.2f, \"itemCount\": %d}",
                 total, itemCount
             );
-            
             response.setContentType("application/json");
             response.getWriter().write(jsonResponse);
             
@@ -214,6 +224,35 @@ public class CartServlet extends HttpServlet {
         response.getWriter().write(jsonResponse);
     }
     
+    private void getCartCounts(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        HttpSession session = request.getSession(false);
+        @SuppressWarnings("unchecked")
+        List<CartItem> cart = session != null ? (List<CartItem>) session.getAttribute("cart") : null;
+        
+        StringBuilder sb = new StringBuilder();
+        sb.append('{');
+        int itemCount = cart != null ? cart.size() : 0;
+        sb.append("\"itemCount\":").append(itemCount).append(',');
+        sb.append("\"items\":[");
+        if (cart != null) {
+            for (int i = 0; i < cart.size(); i++) {
+                CartItem ci = cart.get(i);
+                sb.append('{')
+                  .append("\"menuId\":").append(ci.getMenuId()).append(',')
+                  .append("\"quantity\":").append(ci.getQuantity())
+                  .append('}');
+                if (i < cart.size() - 1) sb.append(',');
+            }
+        }
+        sb.append(']');
+        double total = calculateCartTotal(cart);
+        sb.append(',').append("\"total\":").append(String.format("%.2f", total));
+        sb.append('}');
+        response.setContentType("application/json");
+        response.getWriter().write(sb.toString());
+    }
+
     private void showCart(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         

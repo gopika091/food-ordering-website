@@ -187,7 +187,7 @@
     <a href="<%= request.getContextPath() %>/index.jsp" class="back-btn">← Back to Restaurants</a>
     
     <!-- Cart Button -->
-    <a href="<%= request.getContextPath() %>/cart" class="cart-btn">🛒 View Cart</a>
+    <a href="<%= request.getContextPath() %>/cart" class="cart-btn">🛒 Cart</a>
     
     <!-- Debug Info Section (only visible if restaurant is null) -->
     <%
@@ -314,9 +314,13 @@
                                             </div>
                                             <div class="menu-item-footer">
                                                 <div class="menu-item-price">₹<%= String.format("%.2f", item.getPrice()) %></div>
-                                                                                                        <button class="add-to-cart-btn" onclick="addToCart(<%= item.getMenuId() %>, '<%= item.getItemName() %>', <%= item.getPrice() %>, <%= restaurant.getRestaurantId() %>, '<%= restaurant.getName() %>')">
-                                                            Add to Cart
-                                                        </button>
+                                                <form method="post" action="<%= request.getContextPath() %>/cart/add" style="margin:0;">
+                                                    <input type="hidden" name="menuId" value="<%= item.getMenuId() %>"/>
+                                                    <input type="hidden" name="restaurantId" value="<%= restaurant.getRestaurantId() %>"/>
+                                                    <input type="hidden" name="restaurantName" value="<%= restaurant.getName() %>"/>
+                                                    <input type="hidden" name="redirect" value="true"/>
+                                                    <button type="submit" class="add-to-cart-btn">Add to Cart</button>
+                                                </form>
                                             </div>
                                         </div>
                                     </div>
@@ -365,32 +369,7 @@
     </footer>
     
                 <script>
-                function addToCart(menuId, itemName, price, restaurantId, restaurantName) {
-                    // Add item to cart using AJAX
-                    fetch('<%= request.getContextPath() %>/cart/add', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                        },
-                        body: 'menuId=' + menuId + '&restaurantId=' + restaurantId + '&restaurantName=' + encodeURIComponent(restaurantName)
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            // Show success message
-                            showNotification('Added ' + itemName + ' to cart!', 'success');
-                            
-                            // Update cart count if you have a cart icon
-                            updateCartCount(data.itemCount);
-                        } else {
-                            showNotification('Error: ' + data.message, 'error');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        showNotification('Error adding item to cart', 'error');
-                    });
-                }
+                function addToCart() {}
                 
                 function showNotification(message, type) {
                     // Create notification element

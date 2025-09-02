@@ -42,6 +42,7 @@
         <div class="nav-container">
             <a href="index.jsp" class="logo">🍕 FoodZone</a>
             <div class="nav-buttons">
+                <a href="<%= request.getContextPath() %>/cart" class="btn btn-outline" style="margin-right:10px;">🛒 Cart<span id="cart-count" style="margin-left:6px;"></span></a>
                 <a href="login.jsp" class="btn btn-outline">Login</a>
                 <a href="register.jsp" class="btn btn-primary">Sign Up</a>
             </div>
@@ -51,7 +52,7 @@
     <!-- Hero Section -->
     <section class="hero">
         <div class="hero-content">
-            <h1>Order Food Online</h1>
+            <h1>Heloooo aakashh order me somethink now eeeeee</h1>
             <p>Discover restaurants and cuisines around you</p>
             <div class="search-container">
                 <input type="text" class="search-input" placeholder="Search for restaurants, cuisines...">

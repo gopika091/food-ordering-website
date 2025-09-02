@@ -180,6 +180,8 @@
 <body>
     <!-- Back Button -->
     <a href="<%= request.getContextPath() %>/index.jsp" class="back-btn">← Back to Restaurants</a>
+    <!-- Cart Button (top-right) -->
+    <a href="<%= request.getContextPath() %>/cart" class="back-btn" style="left:auto; right:20px; background:#28a745;">🛒 Cart</a>
     
     <%
     // Get restaurant ID from parameter
@@ -317,9 +319,13 @@
                                             </div>
                                             <div class="menu-item-footer">
                                                 <div class="menu-item-price">₹<%= String.format("%.2f", item.getPrice()) %></div>
-                                                <button class="add-to-cart-btn" onclick="alert('Add to Cart: <%= item.getItemName() %>')">
-                                                    Add to Cart
-                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="add-to-cart-btn"
+                                                    data-menu-id="<%= item.getMenuId() %>"
+                                                    data-restaurant-id="<%= restaurant.getRestaurantId() %>"
+                                                    data-restaurant-name="<%= restaurant.getName() %>"
+                                                >Add to Cart</button>
                                             </div>
                                         </div>
                                     </div>
@@ -379,5 +385,117 @@
             <a href="#">Terms of Service</a>
         </div>
     </footer>
-</body>
-</html>
+    <script>
+    (function() {
+        function qs(selector, scope) { return (scope || document).querySelector(selector); }
+        function qsa(selector, scope) { return Array.prototype.slice.call((scope || document).querySelectorAll(selector)); }
+
+        function setButtonState(button, state, qty) {
+            if (state === 'loading') {
+                button.disabled = true;
+                button.textContent = 'Adding...';
+            } else if (state === 'added') {
+                button.disabled = false;
+                button.innerHTML = (
+                    '<div class="qty-control" style="display:flex;align-items:center;gap:8px;">'
+                  +   '<button type="button" class="qty-btn" data-action="dec" style="background:transparent;border:0;width:auto;height:auto;padding:0;font-size:18px;line-height:1;cursor:pointer;">−</button>'
+                  +   '<span class="qty-value" style="min-width:22px;text-align:center;display:inline-block;font-weight:700;">' + (qty || 1) + '</span>'
+                  +   '<button type="button" class="qty-btn" data-action="inc" style="background:transparent;border:0;width:auto;height:auto;padding:0;font-size:18px;line-height:1;cursor:pointer;">+</button>'
+                  + '</div>'
+                );
+            } else {
+                button.disabled = false;
+                button.textContent = 'Add to Cart';
+            }
+        }
+
+        function addToCart(button) {
+            var menuId = button.getAttribute('data-menu-id');
+            var restaurantId = button.getAttribute('data-restaurant-id');
+            var restaurantName = button.getAttribute('data-restaurant-name');
+
+            setButtonState(button, 'loading');
+
+            fetch('<%= request.getContextPath() %>/cart/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'menuId=' + encodeURIComponent(menuId) +
+                      '&restaurantId=' + encodeURIComponent(restaurantId) +
+                      '&restaurantName=' + encodeURIComponent(restaurantName)
+            })
+            .then(function(res) { return res.ok ? res.json() : Promise.reject(); })
+            .then(function(json) {
+                setButtonState(button, 'added', 1);
+                // Optionally update a cart count badge if present
+                var countEl = qs('#cart-count');
+                if (countEl && typeof json.itemCount === 'number') {
+                    countEl.textContent = '(' + json.itemCount + ')';
+                }
+            })
+            .catch(function() {
+                setButtonState(button, 'default');
+                alert('Could not add to cart. Please try again.');
+            });
+        }
+
+        function updateQty(buttonEl, delta) {
+            var wrapperBtn = buttonEl.closest('.add-to-cart-btn');
+            var menuId = wrapperBtn.getAttribute('data-menu-id');
+            var qtyValue = wrapperBtn.querySelector('.qty-value');
+            var current = parseInt(qtyValue.textContent || '1', 10);
+            var next = current + delta;
+
+            if (next <= 0) {
+                // remove
+                fetch('<%= request.getContextPath() %>/cart/remove', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'menuId=' + encodeURIComponent(menuId)
+                }).then(function(res){ return res.ok ? res.json() : Promise.reject(); })
+                  .then(function(json){
+                      setButtonState(wrapperBtn, 'default');
+                      var countEl = qs('#cart-count');
+                      if (countEl && typeof json.itemCount === 'number') countEl.textContent = '(' + json.itemCount + ')';
+                  });
+                return;
+            }
+
+            fetch('<%= request.getContextPath() %>/cart/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'menuId=' + encodeURIComponent(menuId) + '&quantity=' + encodeURIComponent(next)
+            }).then(function(res){ return res.ok ? res.json() : Promise.reject(); })
+              .then(function(){ qtyValue.textContent = String(next); });
+        }
+
+        document.addEventListener('click', function(e) {
+            var target = e.target;
+            if (target && target.classList.contains('add-to-cart-btn')) {
+                e.preventDefault();
+                addToCart(target);
+            } else if (target && target.classList.contains('qty-btn')) {
+                e.preventDefault();
+                var action = target.getAttribute('data-action');
+                updateQty(target, action === 'inc' ? 1 : -1);
+            }
+        });
+
+        // Initialize existing quantities for items already in cart
+        function applyExistingQuantities(counts) {
+            if (!counts || !counts.items) return;
+            counts.items.forEach(function(it){
+                var btn = document.querySelector('.add-to-cart-btn[data-menu-id="' + it.menuId + '"]');
+                if (btn) setButtonState(btn, 'added', it.quantity);
+            });
+            var countEl = qs('#cart-count');
+            if (countEl && typeof counts.itemCount === 'number') countEl.textContent = '(' + counts.itemCount + ')';
+        }
+
+        fetch('<%= request.getContextPath() %>/cart/counts', { method: 'GET' })
+            .then(function(res){ return res.ok ? res.json() : Promise.reject(); })
+            .then(applyExistingQuantities)
+            .catch(function(){});
+    })();
+    </script>
+ </body>
+ </html>
